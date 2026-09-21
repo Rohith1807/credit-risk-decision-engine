@@ -1,0 +1,52 @@
+project:
+  name: credit-risk-decision-engine
+  version: 0.1.0
+
+business:
+  product_type: bnpl
+  currency: USD
+
+target:
+  column: default_status
+  positive_class: 1
+  definition: "90+ days past due"
+  expected_default_rate_min: 0.03
+  expected_default_rate_max: 0.05
+
+model:
+  primary_metric: pr_auc
+
+  secondary_metrics:
+    - roc_auc
+    - precision
+    - recall
+    - f1
+    - brier_score
+
+  calibration_required: true
+
+policy:
+  initial_thresholds:
+    low_risk_max_pd: 0.02
+    moderate_risk_max_pd: 0.08
+
+  initial_limits:
+    full_approval: 1000
+    low_and_grow: 100
+    fallback: 50
+
+guardrails:
+  require_model_version: true
+  require_policy_version: true
+  require_reason_codes: true
+  enable_fallback: true
+  enable_data_confidence: true
+
+data:
+  random_seed: 42
+
+  synthetic:
+    users: 50000
+    applications: 150000
+
+    target_default_rate: 0.04
