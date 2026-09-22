@@ -1,0 +1,59 @@
+portfolio:
+  seed: 42
+
+  users:
+    count: 50000
+
+  applications:
+    count: 150000
+
+  accounts_per_user:
+    min: 1
+    max: 3
+
+  transaction_history_days:
+    min: 90
+    max: 365
+
+  requested_amount:
+    min: 25
+    max: 1500
+
+  target_default_rate:
+    min: 0.03
+    max: 0.05
+
+  bank_data_available_rate: 0.75
+
+  categories:
+
+  employment_type:
+    - salaried
+    - hourly
+    - self_employed
+    - gig_worker
+    - student
+
+  account_type:
+    - checking
+    - savings
+
+  device_type:
+    - mobile
+    - desktop
+    - tablet
+
+  channel:
+    - checkout
+    - mobile_app
+    - web
+
+  merchant_category:
+    - electronics
+    - apparel
+    - home
+    - travel
+    - healthcare
+    - education
+    - entertainment
+    - general_retail
