@@ -2,10 +2,7 @@ portfolio:
   seed: 42
 
   users:
-    count: 50000
-
-  applications:
-    count: 150000
+    count: 1000
 
   accounts_per_user:
     min: 1
@@ -15,48 +12,41 @@ portfolio:
     min: 90
     max: 365
 
-  requested_amount:
-    min: 25
-    max: 1500
-
   target_default_rate:
     min: 0.03
     max: 0.05
 
-  bank_data_available_rate: 0.75
-
   categories:
+    employment_type:
+      - salaried
+      - hourly
+      - self_employed
+      - gig_worker
+      - student
 
-  employment_type:
-    - salaried
-    - hourly
-    - self_employed
-    - gig_worker
-    - student
+    account_type:
+      - checking
+      - savings
 
-  account_type:
-    - checking
-    - savings
+    device_type:
+      - mobile
+      - desktop
+      - tablet
 
-  device_type:
-    - mobile
-    - desktop
-    - tablet
+    channel:
+      - checkout
+      - mobile_app
+      - web
 
-  channel:
-    - checkout
-    - mobile_app
-    - web
-
-  merchant_category:
-    - electronics
-    - apparel
-    - home
-    - travel
-    - healthcare
-    - education
-    - entertainment
-    - general_retail
+    merchant_category:
+      - electronics
+      - apparel
+      - home
+      - travel
+      - healthcare
+      - education
+      - entertainment
+      - general_retail
 
   transactions:
     history_days: 180
@@ -72,3 +62,16 @@ portfolio:
     starting_balance:
       min: 200
       max: 6000
+
+  application_generation:
+    lookback_window_days: 90
+
+    applications_per_user:
+      min: 1
+      max: 6
+
+    bank_data_available_rate: 0.75
+
+    requested_amount:
+      min: 25
+      max: 1500

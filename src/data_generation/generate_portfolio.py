@@ -5,6 +5,9 @@ from src.data_generation.generate_users import generate_users
 from src.data_generation.generate_transactions import (
     generate_transactions,
 )
+from src.data_generation.generate_applications import (
+    generate_applications,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -53,6 +56,23 @@ def generate_portfolio():
     print(
         f"Transactions generated: "
         f"{len(transactions):,}"
+    )
+
+    print("Generating applications...")
+
+    applications = generate_applications(
+        users
+    )
+
+    applications.to_parquet(
+        RAW_DATA_DIR
+        / "applications.parquet",
+        index=False,
+    )
+
+    print(
+        f"Applications generated: "
+        f"{len(applications):,}"
     )
 
     print("Portfolio generation completed.")
