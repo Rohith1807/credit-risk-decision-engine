@@ -75,3 +75,14 @@ portfolio:
     requested_amount:
       min: 25
       max: 1500
+
+  loan_generation:
+    historical_approval_rate_target: 0.80
+
+    term_days: 42
+    installment_count: 4
+    interest_rate: 0.00
+
+    default_definition_days_past_due: 90
+
+    loss_given_default: 0.85

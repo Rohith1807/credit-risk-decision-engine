@@ -9,6 +9,14 @@ from src.data_generation.generate_applications import (
     generate_applications,
 )
 
+from src.data_generation.generate_loans import (
+    generate_loans,
+)
+
+from src.data_generation.generate_repayments import (
+    generate_repayments,
+)
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
@@ -73,6 +81,64 @@ def generate_portfolio():
     print(
         f"Applications generated: "
         f"{len(applications):,}"
+    )
+
+    print("Generating loans...")
+
+    loans = generate_loans(
+        applications
+    )
+
+    loans.to_parquet(
+        RAW_DATA_DIR
+        / "loans.parquet",
+        index=False,
+    )
+
+    print(
+        f"Loans generated: "
+        f"{len(loans):,}"
+    )
+
+    print(
+    "Generating repayments "
+    "and credit outcomes..."
+)
+
+    repayments, outcomes = (
+        generate_repayments(
+            loans=loans,
+            applications=applications,
+            users=users,
+            transactions=transactions,
+        )
+    )
+
+    repayments.to_parquet(
+        RAW_DATA_DIR
+        / "repayments.parquet",
+        index=False,
+    )
+
+    outcomes.to_parquet(
+        RAW_DATA_DIR
+        / "loan_outcomes.parquet",
+        index=False,
+    )
+
+    print(
+        f"Repayments generated: "
+        f"{len(repayments):,}"
+    )
+
+    print(
+        f"Defaults generated: "
+        f"{outcomes['default_status'].sum():,}"
+    )
+
+    print(
+        "Default rate: "
+        f"{outcomes['default_status'].mean():.2%}"
     )
 
     print("Portfolio generation completed.")

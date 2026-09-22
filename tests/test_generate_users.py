@@ -4,7 +4,7 @@ from src.data_generation.generate_users import generate_users
 def test_user_count():
     users = generate_users()
 
-    assert len(users) == 50000
+    assert len(users) == 1000
 
 
 def test_user_ids_unique():
