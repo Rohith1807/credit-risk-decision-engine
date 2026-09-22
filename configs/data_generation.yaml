@@ -57,3 +57,18 @@ portfolio:
     - education
     - entertainment
     - general_retail
+
+  transactions:
+    history_days: 180
+
+    monthly_spend_events:
+      min: 18
+      max: 35
+
+    checking_share: 0.90
+
+    overdraft_probability: 0.08
+
+    starting_balance:
+      min: 200
+      max: 6000

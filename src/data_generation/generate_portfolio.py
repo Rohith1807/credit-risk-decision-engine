@@ -2,6 +2,9 @@ from pathlib import Path
 
 from src.data_generation.generate_accounts import generate_accounts
 from src.data_generation.generate_users import generate_users
+from src.data_generation.generate_transactions import (
+    generate_transactions,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -33,6 +36,24 @@ def generate_portfolio():
     )
 
     print(f"Bank accounts generated: {len(accounts):,}")
+
+    print("Generating transactions...")
+
+    transactions = generate_transactions(
+        users,
+        accounts,
+    )
+
+    transactions.to_parquet(
+        RAW_DATA_DIR
+        / "transactions.parquet",
+        index=False,
+    )
+
+    print(
+        f"Transactions generated: "
+        f"{len(transactions):,}"
+    )
 
     print("Portfolio generation completed.")
 
