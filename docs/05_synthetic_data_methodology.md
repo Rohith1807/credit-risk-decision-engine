@@ -42,3 +42,19 @@ A hidden synthetic risk function determines the probability of default using pre
 The resulting latent probability is used only to generate synthetic repayment outcomes.
 
 The latent risk score and latent probability are prohibited from use as predictive model features.
+
+## Default Rate Calibration
+
+The synthetic latent-risk intercept was calibrated on the development portfolio.
+
+The original intercept produced an observed default rate above the intended project range.
+
+The intercept was adjusted to:
+
+`-5.2`
+
+Using the 1,000-user development portfolio, this produced an observed default rate of approximately 4.96%.
+
+The calibration target for the synthetic portfolio is 3–5%.
+
+This value is a simulation parameter and is not intended to represent an externally validated BNPL industry default estimate.
