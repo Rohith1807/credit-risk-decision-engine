@@ -16,6 +16,10 @@ from src.features.transaction_features import (
     calculate_transaction_features,
 )
 
+from src.features.advanced_features import (
+    calculate_advanced_features,
+)
+
 
 def build_application_features(
     application: dict,
@@ -85,25 +89,69 @@ def build_application_features(
             ),
     }
 
-    features.update(
-        calculate_income_features(
-            history,
-            application_timestamp,
-        )
+    income_features = (
+    calculate_income_features(
+        history,
+        application_timestamp,
     )
+)
 
-    features.update(
+    balance_features = (
         calculate_balance_features(
             history,
             application_timestamp,
         )
     )
 
-    features.update(
+    transaction_features = (
         calculate_transaction_features(
             history,
             application_timestamp,
         )
+    )
+
+    features.update(
+        income_features
+    )
+
+    features.update(
+        balance_features
+    )
+
+    features.update(
+        transaction_features
+    )
+
+    advanced_base_features = {
+        **income_features,
+        **balance_features,
+        **transaction_features,
+    }
+
+    advanced_features = (
+        calculate_advanced_features(
+            history=history,
+            application_timestamp=
+                application_timestamp,
+            requested_amount=
+                float(
+                    application[
+                        "requested_amount"
+                    ]
+                ),
+            bank_data_available=
+                int(
+                    application[
+                        "bank_data_available"
+                    ]
+                ),
+            base_features=
+                advanced_base_features,
+        )
+    )
+
+    features.update(
+        advanced_features
     )
 
     return features
