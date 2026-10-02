@@ -175,7 +175,7 @@ def calculate_latent_default_probability(
         / recent_income
     )
 
-    risk_score = -5.2
+    risk_score = -4.8
 
     # Negative balance behavior
     risk_score += (
@@ -228,15 +228,6 @@ def calculate_latent_default_probability(
 
     elif cash_buffer < 300:
         risk_score += 0.35
-
-    # Employment-specific uncertainty.
-    # This does NOT mean these groups are inherently riskier.
-    # It only simulates different cash-flow volatility patterns.
-    if employment_type in {
-        "gig_worker",
-        "self_employed",
-    }:
-        risk_score += 0.12
 
     probability = sigmoid(
         risk_score

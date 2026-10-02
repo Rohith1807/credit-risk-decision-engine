@@ -60,8 +60,7 @@ MERCHANTS = {
         "Internet Provider",
         "Mobile Provider",
     ],
-}
-
+    }
 
 def get_income_profile(
     employment_type: str,
@@ -102,6 +101,40 @@ def get_income_profile(
             "monthly_income_std": 800,
             "payments_per_month": 2,
             "income_variability": 0.35,
+        },
+    }
+
+    return profiles[employment_type]
+
+def get_expense_profile(
+    employment_type: str,
+) -> dict:
+    """
+    Synthetic expense assumptions by employment type.
+
+    These are simulation assumptions, not empirical estimates.
+    """
+
+    profiles = {
+        "salaried": {
+            "housing_ratio": 0.28,
+            "spend_multiplier": 1.00,
+        },
+        "hourly": {
+            "housing_ratio": 0.27,
+            "spend_multiplier": 0.85,
+        },
+        "self_employed": {
+            "housing_ratio": 0.27,
+            "spend_multiplier": 1.00,
+        },
+        "gig_worker": {
+            "housing_ratio": 0.25,
+            "spend_multiplier": 0.75,
+        },
+        "student": {
+            "housing_ratio": 0.20,
+            "spend_multiplier": 0.55,
         },
     }
 
@@ -281,11 +314,24 @@ def generate_recurring_expenses(
     rng: np.random.Generator,
     user_id: str,
     account_id: str,
+    employment_type: str,
     start_date: pd.Timestamp,
     end_date: pd.Timestamp,
 ) -> list[dict]:
 
     records = []
+
+    income_profile = get_income_profile(
+    employment_type
+)
+
+    expense_profile = get_expense_profile(
+        employment_type
+    )
+
+    monthly_income = income_profile[
+        "monthly_income_mean"
+    ]
 
     current_month = pd.Timestamp(
         start_date.year,
@@ -307,9 +353,24 @@ def generate_recurring_expenses(
 
         if housing_date >= start_date:
 
-            housing_amount = rng.uniform(
-                700,
-                2200,
+            base_housing = (
+                monthly_income
+                * expense_profile[
+                    "housing_ratio"
+                ]
+            )
+
+            housing_amount = rng.normal(
+                loc=base_housing,
+                scale=base_housing * 0.15,
+            )
+
+            housing_amount = float(
+                np.clip(
+                    housing_amount,
+                    350,
+                    2200,
+                )
             )
 
             records.append(
@@ -350,9 +411,21 @@ def generate_recurring_expenses(
             and utility_date <= end_date
         ):
 
-            amount = rng.uniform(
-                80,
-                350,
+            utility_base = (
+                monthly_income * 0.045
+            )
+
+            amount = rng.normal(
+                loc=utility_base,
+                scale=utility_base * 0.20,
+            )
+
+            amount = float(
+                np.clip(
+                    amount,
+                    40,
+                    300,
+                )
             )
 
             records.append(
@@ -383,6 +456,7 @@ def generate_spending_transactions(
     rng: np.random.Generator,
     user_id: str,
     account_id: str,
+    employment_type: str,
     start_date: pd.Timestamp,
     end_date: pd.Timestamp,
     min_monthly_events: int,
@@ -390,6 +464,16 @@ def generate_spending_transactions(
 ) -> list[dict]:
 
     records = []
+
+    expense_profile = get_expense_profile(
+        employment_type
+    )
+
+    spend_multiplier = (
+        expense_profile[
+            "spend_multiplier"
+        ]
+    )
 
     history_days = (end_date - start_date).days
     months = max(1, history_days / 30)
@@ -428,6 +512,8 @@ def generate_spending_transactions(
             minimum,
             maximum,
         )
+
+        amount *= spend_multiplier
 
         merchant = rng.choice(
             MERCHANTS[category]
@@ -639,6 +725,14 @@ def add_running_balances(
         .round(2)
     )
 
+    transactions[
+        "balance_after_transaction"
+    ] = transactions[
+        "balance_after_transaction"
+    ].clip(
+        lower=-1000
+    )
+
     return transactions.drop(
         columns=[
             "balance_change",
@@ -736,6 +830,7 @@ def generate_transactions(
                 rng,
                 user_id,
                 account_id,
+                employment_type,
                 start_date,
                 end_date,
             )
@@ -746,6 +841,7 @@ def generate_transactions(
                 rng,
                 user_id,
                 account_id,
+                employment_type,
                 start_date,
                 end_date,
                 transaction_config[
