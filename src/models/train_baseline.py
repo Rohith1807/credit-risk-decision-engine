@@ -99,7 +99,7 @@ def train_baseline():
 
     model = LogisticRegression(
         max_iter=2000,
-        class_weight="balanced",
+        class_weight=None,
         random_state=42,
     )
 
@@ -129,7 +129,7 @@ def train_baseline():
 
         mlflow.log_param(
             "class_weight",
-            "balanced",
+            "none",
         )
 
         mlflow.log_param(
