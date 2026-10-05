@@ -6,3 +6,5 @@ matplotlib
 jupyter
 pytest
 pyarrow
+mlflow
+joblib

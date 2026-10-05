@@ -21,6 +21,12 @@ BINARY_FEATURES = [
     "bank_data_available",
 ]
 
+EXCLUDED_V1_FEATURES = [
+    "transaction_count_10m",
+    "transaction_count_1h",
+    "unique_merchants_1h",
+]
+
 def get_numerical_features(
     dataset_columns: list[str],
 ) -> list[str]:
