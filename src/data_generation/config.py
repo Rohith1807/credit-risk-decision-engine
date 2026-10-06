@@ -12,3 +12,18 @@ def load_data_generation_config() -> dict:
 
     with open(CONFIG_PATH, "r", encoding="utf-8") as file:
         return yaml.safe_load(file)
+
+
+def load_yaml(
+    path: str | Path,
+) -> dict:
+
+    with open(
+        path,
+        "r",
+        encoding="utf-8",
+    ) as file:
+
+        return yaml.safe_load(
+            file
+        )
