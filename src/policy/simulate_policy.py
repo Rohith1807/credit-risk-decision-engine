@@ -53,8 +53,12 @@ def safe_value(
 
 def apply_policy(
     dataframe: pd.DataFrame,
+    config: dict | None = None,
+    apply_behavioral_guardrails: bool = True,
 ) -> pd.DataFrame:
-    config = load_policy()
+
+    if config is None:
+        config = load_policy()
 
     decisions = []
 
@@ -82,6 +86,9 @@ def apply_policy(
                 row.negative_balance_rate_30d
             ),
             config=config,
+            apply_behavioral_guardrails=(
+                apply_behavioral_guardrails
+            ),
         )
 
         decisions.append(

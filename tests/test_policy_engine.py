@@ -230,3 +230,39 @@ def test_policy_metrics():
         ]
         == 200
     )
+
+def test_behavioral_guardrails_can_be_disabled():
+
+    with_guardrails = make_credit_decision(
+        probability_default=0.02,
+        requested_amount=500,
+        bank_data_available=1,
+        data_confidence_score=0.90,
+        loan_to_income_ratio=0.50,
+        bnpl_payment_burden=0.05,
+        negative_balance_rate_30d=0.05,
+        config=TEST_CONFIG,
+        apply_behavioral_guardrails=True,
+    )
+
+    without_guardrails = make_credit_decision(
+        probability_default=0.02,
+        requested_amount=500,
+        bank_data_available=1,
+        data_confidence_score=0.90,
+        loan_to_income_ratio=0.50,
+        bnpl_payment_burden=0.05,
+        negative_balance_rate_30d=0.05,
+        config=TEST_CONFIG,
+        apply_behavioral_guardrails=False,
+    )
+
+    assert (
+        with_guardrails.decision
+        == "REJECT"
+    )
+
+    assert (
+        without_guardrails.decision
+        == "APPROVE"
+    )

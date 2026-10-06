@@ -36,6 +36,7 @@ def make_credit_decision(
     bnpl_payment_burden: float | None,
     negative_balance_rate_30d: float | None,
     config: dict,
+    apply_behavioral_guardrails: bool = True,
 ) -> PolicyDecision:
 
     policy = config["policy"]
@@ -107,7 +108,8 @@ def make_credit_decision(
     # --------------------------------
 
     elif (
-        loan_to_income_ratio is not None
+        apply_behavioral_guardrails
+        and loan_to_income_ratio is not None
         and loan_to_income_ratio
         > guardrails[
             "max_loan_to_income_ratio"
@@ -119,7 +121,8 @@ def make_credit_decision(
         reason = HIGH_LTI
 
     elif (
-        bnpl_payment_burden is not None
+        apply_behavioral_guardrails
+         and bnpl_payment_burden is not None
         and bnpl_payment_burden
         > guardrails[
             "max_bnpl_payment_burden"
@@ -131,7 +134,8 @@ def make_credit_decision(
         reason = HIGH_BNPL_BURDEN
 
     elif (
-        negative_balance_rate_30d
+        apply_behavioral_guardrails
+        and negative_balance_rate_30d
         is not None
         and negative_balance_rate_30d
         > guardrails[
