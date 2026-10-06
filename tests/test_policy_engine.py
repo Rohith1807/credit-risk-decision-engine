@@ -150,3 +150,83 @@ def test_missing_bank_data_fallback():
     assert result.policy_tier == "FALLBACK"
 
     assert result.approved_limit == 50
+
+import pandas as pd
+
+from src.policy.portfolio_metrics import (
+    calculate_policy_metrics,
+)
+
+
+def test_policy_metrics():
+    dataframe = pd.DataFrame(
+        {
+            "decision": [
+                "APPROVE",
+                "APPROVE",
+                "REJECT",
+            ],
+            "requested_amount": [
+                100,
+                200,
+                300,
+            ],
+            "approved_limit": [
+                100,
+                100,
+                0,
+            ],
+            "expected_loss": [
+                5,
+                10,
+                0,
+            ],
+            "expected_profit": [
+                4,
+                3,
+                0,
+            ],
+            "default_status": [
+                0,
+                1,
+                1,
+            ],
+        }
+    )
+
+    metrics = (
+        calculate_policy_metrics(
+            dataframe
+        )
+    )
+
+    assert (
+        metrics[
+            "applications"
+        ]
+        == 3
+    )
+
+    assert (
+        metrics[
+            "approved_count"
+        ]
+        == 2
+    )
+
+    assert round(
+        metrics[
+            "approval_rate"
+        ],
+        4,
+    ) == round(
+        2 / 3,
+        4,
+    )
+
+    assert (
+        metrics[
+            "approved_gmv"
+        ]
+        == 200
+    )
