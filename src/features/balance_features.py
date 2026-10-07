@@ -7,6 +7,9 @@ def calculate_balance_features(
 ) -> dict:
     """
     Calculate account balance behavior before underwriting.
+
+    If balance information is unavailable, return missing values
+    rather than fabricating zero balances.
     """
 
     application_timestamp = pd.Timestamp(
@@ -15,14 +18,57 @@ def calculate_balance_features(
 
     if history.empty:
         return {
-            "current_balance": 0.0,
-            "avg_balance_30d": 0.0,
-            "median_balance_30d": 0.0,
-            "min_balance_30d": 0.0,
-            "balance_std_30d": 0.0,
-            "negative_balance_events_30d": 0,
-            "negative_balance_rate_30d": 0.0,
+            "current_balance": pd.NA,
+            "avg_balance_30d": pd.NA,
+            "median_balance_30d": pd.NA,
+            "min_balance_30d": pd.NA,
+            "balance_std_30d": pd.NA,
+            "negative_balance_events_30d": pd.NA,
+            "negative_balance_rate_30d": pd.NA,
         }
+
+    if (
+        "balance_after_transaction"
+        not in history.columns
+    ):
+        return {
+            "current_balance": pd.NA,
+            "avg_balance_30d": pd.NA,
+            "median_balance_30d": pd.NA,
+            "min_balance_30d": pd.NA,
+            "balance_std_30d": pd.NA,
+            "negative_balance_events_30d": pd.NA,
+            "negative_balance_rate_30d": pd.NA,
+        }
+
+    # --------------------------------
+    # Current balance
+    # --------------------------------
+
+    all_balances = pd.to_numeric(
+        history[
+            "balance_after_transaction"
+        ],
+        errors="coerce",
+    )
+
+    valid_all_balances = (
+        all_balances.dropna()
+    )
+
+    if valid_all_balances.empty:
+        current_balance = pd.NA
+    else:
+        current_balance = round(
+            float(
+                valid_all_balances.iloc[-1]
+            ),
+            2,
+        )
+
+    # --------------------------------
+    # Recent 30-day history
+    # --------------------------------
 
     cutoff_30d = (
         application_timestamp
@@ -34,79 +80,116 @@ def calculate_balance_features(
             "transaction_timestamp"
         ]
         >= cutoff_30d
-    ]
+    ].copy()
 
     if recent.empty:
-        recent = history.tail(1)
+        recent = history.tail(
+            1
+        ).copy()
 
-    balances = recent[
-        "balance_after_transaction"
-    ]
-
-    current_balance = float(
-        history.iloc[-1][
+    recent_balances = pd.to_numeric(
+        recent[
             "balance_after_transaction"
-        ]
+        ],
+        errors="coerce",
+    ).dropna()
+
+    # --------------------------------
+    # Missing balance information
+    # --------------------------------
+
+    if recent_balances.empty:
+        return {
+            "current_balance":
+                current_balance,
+
+            "avg_balance_30d":
+                pd.NA,
+
+            "median_balance_30d":
+                pd.NA,
+
+            "min_balance_30d":
+                pd.NA,
+
+            "balance_std_30d":
+                pd.NA,
+
+            "negative_balance_events_30d":
+                pd.NA,
+
+            "negative_balance_rate_30d":
+                pd.NA,
+        }
+
+    # --------------------------------
+    # Balance statistics
+    # --------------------------------
+
+    avg_balance_30d = round(
+        float(
+            recent_balances.mean()
+        ),
+        2,
     )
 
-    negative_events = int(
-        (balances < 0).sum()
+    median_balance_30d = round(
+        float(
+            recent_balances.median()
+        ),
+        2,
     )
 
-    negative_rate = (
-        negative_events
-        / len(balances)
-        if len(balances) > 0
-        else 0.0
+    min_balance_30d = round(
+        float(
+            recent_balances.min()
+        ),
+        2,
+    )
+
+    balance_std_30d = round(
+        float(
+            recent_balances.std(
+                ddof=0
+            )
+        ),
+        2,
+    )
+
+    negative_balance_events_30d = int(
+        (
+            recent_balances < 0
+        ).sum()
+    )
+
+    negative_balance_rate_30d = round(
+        float(
+            (
+                recent_balances < 0
+            ).mean()
+        ),
+        4,
     )
 
     return {
         "current_balance":
-            round(
-                current_balance,
-                2,
-            ),
+            current_balance,
 
         "avg_balance_30d":
-            round(
-                float(
-                    balances.mean()
-                ),
-                2,
-            ),
+            avg_balance_30d,
 
         "median_balance_30d":
-            round(
-                float(
-                    balances.median()
-                ),
-                2,
-            ),
+            median_balance_30d,
 
         "min_balance_30d":
-            round(
-                float(
-                    balances.min()
-                ),
-                2,
-            ),
+            min_balance_30d,
 
         "balance_std_30d":
-            round(
-                float(
-                    balances.std(
-                        ddof=0
-                    )
-                ),
-                2,
-            ),
+            balance_std_30d,
 
         "negative_balance_events_30d":
-            negative_events,
+            negative_balance_events_30d,
 
         "negative_balance_rate_30d":
-            round(
-                negative_rate,
-                4,
-            ),
+            negative_balance_rate_30d,
     }

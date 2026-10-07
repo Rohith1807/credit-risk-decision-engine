@@ -1,37 +1,83 @@
 import numpy as np
 import pandas as pd
 
-def safe_divide(
-    numerator: float,
-    denominator: float,
-    default: float = 0.0,
-) -> float:
+
+def is_missing(
+    value,
+) -> bool:
     """
-    Safely divide two values while avoiding division-by-zero errors.
+    Return True when a scalar value is missing.
     """
 
-    if denominator is None:
+    if value is None:
+        return True
+
+    try:
+        return bool(
+            pd.isna(value)
+        )
+    except (TypeError, ValueError):
+        return False
+
+
+def safe_divide(
+    numerator,
+    denominator,
+    default=0.0,
+):
+    """
+    Safely divide two values.
+
+    Missing inputs return the supplied default.
+    Division by zero or negative denominator
+    also returns the supplied default.
+    """
+
+    if (
+        is_missing(numerator)
+        or is_missing(denominator)
+    ):
         return default
+
+    denominator = float(
+        denominator
+    )
+
+    numerator = float(
+        numerator
+    )
 
     if denominator <= 0:
         return default
 
     return float(
-        numerator / denominator
+        numerator
+        / denominator
     )
+
 
 def calculate_loan_to_income_ratio(
     requested_amount: float,
-    income_total_90d: float,
-) -> float:
+    income_total_90d,
+):
     """
-    Requested credit amount relative to estimated monthly income.
+    Requested credit amount relative to
+    estimated monthly income.
 
-    90-day income is converted to an approximate monthly amount.
+    90-day income is converted to an
+    approximate monthly amount.
     """
+
+    if is_missing(
+        income_total_90d
+    ):
+        return pd.NA
 
     estimated_monthly_income = (
-        income_total_90d / 3
+        float(
+            income_total_90d
+        )
+        / 3
     )
 
     ratio = safe_divide(
@@ -41,32 +87,63 @@ def calculate_loan_to_income_ratio(
     )
 
     return round(
-        min(ratio, 10.0),
+        min(
+            ratio,
+            10.0,
+        ),
         4,
     )
+
 
 def calculate_requested_amount_to_balance(
     requested_amount: float,
-    current_balance: float,
-) -> float:
+    current_balance,
+):
+    """
+    Calculate requested amount relative
+    to current balance.
 
-    ratio = safe_divide(
-        requested_amount,
-        max(current_balance, 1.0),
-        default=10.0,
+    Returns missing when current balance
+    is unavailable.
+    """
+
+    if is_missing(
+        current_balance
+    ):
+        return pd.NA
+
+    current_balance = float(
+        current_balance
     )
 
     return round(
-        min(ratio, 10.0),
+        float(
+            requested_amount
+        )
+        / max(
+            current_balance,
+            1.0,
+        ),
         4,
     )
 
+
 def calculate_paycheck_proximity(
-    days_since_last_income: int,
-) -> int:
+    days_since_last_income,
+):
     """
-    Number of days since the latest observed income deposit.
+    Number of days since the latest
+    observed income deposit.
     """
+
+    if is_missing(
+        days_since_last_income
+    ):
+        return pd.NA
+
+    days_since_last_income = float(
+        days_since_last_income
+    )
 
     if days_since_last_income < 0:
         return 999
@@ -78,36 +155,78 @@ def calculate_paycheck_proximity(
         )
     )
 
+
 def calculate_discretionary_spend_ratio(
-    discretionary_spend_30d: float,
-    spend_total_30d: float,
-) -> float:
+    discretionary_spend_30d,
+    spend_total_30d,
+):
+    """
+    Share of recent spending classified
+    as discretionary.
+    """
+
+    if (
+        is_missing(
+            discretionary_spend_30d
+        )
+        or is_missing(
+            spend_total_30d
+        )
+    ):
+        return pd.NA
 
     ratio = safe_divide(
         discretionary_spend_30d,
         spend_total_30d,
+        default=0.0,
     )
 
     return round(
-        np.clip(
-            ratio,
-            0.0,
-            1.0,
+        float(
+            np.clip(
+                ratio,
+                0.0,
+                1.0,
+            )
         ),
         4,
     )
 
+
 def calculate_cash_buffer_days(
-    current_balance: float,
-    spend_total_30d: float,
-) -> float:
+    current_balance,
+    spend_total_30d,
+):
     """
-    Estimate how many days of recent spending can be covered
-    by the current observed account balance.
+    Estimate how many days of recent
+    spending can be covered by the
+    current observed account balance.
+
+    Returns missing when current balance
+    is unavailable.
     """
 
+    if (
+        is_missing(
+            current_balance
+        )
+        or is_missing(
+            spend_total_30d
+        )
+    ):
+        return pd.NA
+
+    current_balance = float(
+        current_balance
+    )
+
+    spend_total_30d = float(
+        spend_total_30d
+    )
+
     average_daily_spend = (
-        spend_total_30d / 30
+        spend_total_30d
+        / 30
     )
 
     if average_daily_spend <= 0:
@@ -129,30 +248,47 @@ def calculate_cash_buffer_days(
         2,
     )
 
+
 def calculate_cash_buffer_velocity(
     history: pd.DataFrame,
     application_timestamp: pd.Timestamp,
-) -> float:
+):
     """
-    Estimate balance trajectory by comparing recent and prior
-    average balances.
+    Estimate balance trajectory by
+    comparing recent and prior average
+    balances.
+
+    Returns missing when balance history
+    is unavailable.
     """
 
     if history.empty:
-        return 0.0
+        return pd.NA
 
-    application_timestamp = pd.Timestamp(
-        application_timestamp
+    if (
+        "balance_after_transaction"
+        not in history.columns
+    ):
+        return pd.NA
+
+    application_timestamp = (
+        pd.Timestamp(
+            application_timestamp
+        )
     )
 
     recent_start = (
         application_timestamp
-        - pd.Timedelta(days=15)
+        - pd.Timedelta(
+            days=15
+        )
     )
 
     prior_start = (
         application_timestamp
-        - pd.Timedelta(days=30)
+        - pd.Timedelta(
+            days=30
+        )
     )
 
     recent = history[
@@ -160,7 +296,7 @@ def calculate_cash_buffer_velocity(
             "transaction_timestamp"
         ]
         >= recent_start
-    ]
+    ].copy()
 
     prior = history[
         (
@@ -176,30 +312,53 @@ def calculate_cash_buffer_velocity(
             ]
             < recent_start
         )
-    ]
+    ].copy()
 
-    if recent.empty or prior.empty:
-        return 0.0
+    if (
+        recent.empty
+        or prior.empty
+    ):
+        return pd.NA
 
-    recent_balance = float(
+    recent_balances = pd.to_numeric(
         recent[
             "balance_after_transaction"
-        ].mean()
+        ],
+        errors="coerce",
+    ).dropna()
+
+    prior_balances = pd.to_numeric(
+        prior[
+            "balance_after_transaction"
+        ],
+        errors="coerce",
+    ).dropna()
+
+    if (
+        recent_balances.empty
+        or prior_balances.empty
+    ):
+        return pd.NA
+
+    recent_balance = float(
+        recent_balances.mean()
     )
 
     prior_balance = float(
-        prior[
-            "balance_after_transaction"
-        ].mean()
+        prior_balances.mean()
     )
 
-    if abs(prior_balance) < 1:
+    if abs(
+        prior_balance
+    ) < 1:
         return 0.0
 
     velocity = (
         recent_balance
         - prior_balance
-    ) / abs(prior_balance)
+    ) / abs(
+        prior_balance
+    )
 
     return round(
         float(
@@ -212,27 +371,37 @@ def calculate_cash_buffer_velocity(
         4,
     )
 
+
 def calculate_spend_acceleration(
     history: pd.DataFrame,
     application_timestamp: pd.Timestamp,
 ) -> float:
     """
-    Compare spending during the most recent 7 days
-    with the prior 7 days.
+    Compare spending during the most
+    recent 7 days with the prior 7 days.
     """
 
-    application_timestamp = pd.Timestamp(
-        application_timestamp
+    if history.empty:
+        return 0.0
+
+    application_timestamp = (
+        pd.Timestamp(
+            application_timestamp
+        )
     )
 
     recent_start = (
         application_timestamp
-        - pd.Timedelta(days=7)
+        - pd.Timedelta(
+            days=7
+        )
     )
 
     prior_start = (
         application_timestamp
-        - pd.Timedelta(days=14)
+        - pd.Timedelta(
+            days=14
+        )
     )
 
     recent = history[
@@ -260,7 +429,9 @@ def calculate_spend_acceleration(
 
     recent_spend = float(
         recent.loc[
-            recent["amount"] < 0,
+            recent[
+                "amount"
+            ] < 0,
             "amount",
         ]
         .abs()
@@ -269,7 +440,9 @@ def calculate_spend_acceleration(
 
     prior_spend = float(
         prior.loc[
-            prior["amount"] < 0,
+            prior[
+                "amount"
+            ] < 0,
             "amount",
         ]
         .abs()
@@ -295,31 +468,50 @@ def calculate_spend_acceleration(
         4,
     )
 
+
 def calculate_transaction_velocity(
     history: pd.DataFrame,
     application_timestamp: pd.Timestamp,
 ) -> dict:
     """
-    Calculate short-window transaction activity.
+    Calculate short-window transaction
+    activity.
     """
 
-    application_timestamp = pd.Timestamp(
-        application_timestamp
+    application_timestamp = (
+        pd.Timestamp(
+            application_timestamp
+        )
     )
+
+    if history.empty:
+        return {
+            "transaction_count_10m": 0,
+            "transaction_count_1h": 0,
+            "transaction_count_24h": 0,
+            "unique_merchants_1h": 0,
+            "unique_merchants_24h": 0,
+        }
 
     cutoff_10m = (
         application_timestamp
-        - pd.Timedelta(minutes=10)
+        - pd.Timedelta(
+            minutes=10
+        )
     )
 
     cutoff_1h = (
         application_timestamp
-        - pd.Timedelta(hours=1)
+        - pd.Timedelta(
+            hours=1
+        )
     )
 
     cutoff_24h = (
         application_timestamp
-        - pd.Timedelta(hours=24)
+        - pd.Timedelta(
+            hours=24
+        )
     )
 
     tx_10m = history[
@@ -345,13 +537,25 @@ def calculate_transaction_velocity(
 
     return {
         "transaction_count_10m":
-            int(len(tx_10m)),
+            int(
+                len(
+                    tx_10m
+                )
+            ),
 
         "transaction_count_1h":
-            int(len(tx_1h)),
+            int(
+                len(
+                    tx_1h
+                )
+            ),
 
         "transaction_count_24h":
-            int(len(tx_24h)),
+            int(
+                len(
+                    tx_24h
+                )
+            ),
 
         "unique_merchants_1h":
             int(
@@ -368,14 +572,30 @@ def calculate_transaction_velocity(
             ),
     }
 
+
 def calculate_bnpl_burden(
-    bnpl_payment_amount_90d: float,
-    income_total_90d: float,
-) -> float:
+    bnpl_payment_amount_90d,
+    income_total_90d,
+):
+    """
+    Calculate BNPL repayments relative
+    to observed income.
+    """
+
+    if (
+        is_missing(
+            bnpl_payment_amount_90d
+        )
+        or is_missing(
+            income_total_90d
+        )
+    ):
+        return pd.NA
 
     burden = safe_divide(
         bnpl_payment_amount_90d,
         income_total_90d,
+        default=0.0,
     )
 
     return round(
@@ -389,15 +609,36 @@ def calculate_bnpl_burden(
         4,
     )
 
-def calculate_income_stability_score(
-    income_cv_90d: float,
-    income_count_90d: int,
-) -> float:
-    """
-    Convert income variability and frequency into a 0–1 score.
 
-    Higher values represent more stable observed income.
+def calculate_income_stability_score(
+    income_cv_90d,
+    income_count_90d,
+):
     """
+    Convert income variability and
+    frequency into a 0-1 score.
+
+    Higher values represent more stable
+    observed income.
+    """
+
+    if (
+        is_missing(
+            income_cv_90d
+        )
+        or is_missing(
+            income_count_90d
+        )
+    ):
+        return pd.NA
+
+    income_cv_90d = float(
+        income_cv_90d
+    )
+
+    income_count_90d = float(
+        income_count_90d
+    )
 
     variability_component = (
         1.0
@@ -411,7 +652,8 @@ def calculate_income_stability_score(
     )
 
     frequency_component = min(
-        income_count_90d / 6,
+        income_count_90d
+        / 6,
         1.0,
     )
 
@@ -434,11 +676,19 @@ def calculate_income_stability_score(
         4,
     )
 
+
 def calculate_data_confidence_score(
     history: pd.DataFrame,
     application_timestamp: pd.Timestamp,
     bank_data_available: int,
 ) -> float:
+    """
+    Estimate confidence in available
+    bank telemetry.
+
+    Balance availability contributes to
+    confidence but is not required.
+    """
 
     if bank_data_available == 0:
         return 0.0
@@ -446,14 +696,18 @@ def calculate_data_confidence_score(
     if history.empty:
         return 0.0
 
-    application_timestamp = pd.Timestamp(
-        application_timestamp
+    application_timestamp = (
+        pd.Timestamp(
+            application_timestamp
+        )
     )
 
-    earliest_timestamp = pd.Timestamp(
-        history[
-            "transaction_timestamp"
-        ].min()
+    earliest_timestamp = (
+        pd.Timestamp(
+            history[
+                "transaction_timestamp"
+            ].min()
+        )
     )
 
     history_days = max(
@@ -465,38 +719,60 @@ def calculate_data_confidence_score(
     )
 
     history_component = min(
-        history_days / 90,
+        history_days
+        / 90,
         1.0,
     )
 
     transaction_component = min(
-        len(history) / 100,
+        len(
+            history
+        )
+        / 100,
         1.0,
     )
 
-    income_detected = int(
-        (
-            history[
-                "transaction_type"
-            ]
-            == "income"
-        ).any()
-    )
+    if (
+        "transaction_type"
+        in history.columns
+    ):
+        income_detected = int(
+            (
+                history[
+                    "transaction_type"
+                ]
+                == "income"
+            ).any()
+        )
+    else:
+        income_detected = 0
 
-    balance_available = int(
-        history[
-            "balance_after_transaction"
-        ].notna().any()
-    )
+    if (
+        "balance_after_transaction"
+        in history.columns
+    ):
+        balance_available = int(
+            history[
+                "balance_after_transaction"
+            ]
+            .notna()
+            .any()
+        )
+    else:
+        balance_available = 0
 
     confidence = (
-        0.35 * history_component
+        0.35
+        * history_component
         +
-        0.25 * transaction_component
+        0.25
+        * transaction_component
         +
-        0.25 * income_detected
+        0.25
+        * income_detected
         +
-        0.15 * balance_available
+        0.15
+        * balance_available
     )
 
     return round(
@@ -510,6 +786,7 @@ def calculate_data_confidence_score(
         4,
     )
 
+
 def calculate_advanced_features(
     history: pd.DataFrame,
     application_timestamp: pd.Timestamp,
@@ -517,6 +794,13 @@ def calculate_advanced_features(
     bank_data_available: int,
     base_features: dict,
 ) -> dict:
+    """
+    Build advanced behavioral features
+    for one application.
+
+    Missing source data remains missing
+    rather than being fabricated.
+    """
 
     velocity_features = (
         calculate_transaction_velocity(
@@ -529,44 +813,44 @@ def calculate_advanced_features(
         "loan_to_income_ratio":
             calculate_loan_to_income_ratio(
                 requested_amount,
-                base_features[
+                base_features.get(
                     "income_total_90d"
-                ],
+                ),
             ),
 
         "requested_amount_to_balance":
             calculate_requested_amount_to_balance(
                 requested_amount,
-                base_features[
+                base_features.get(
                     "current_balance"
-                ],
+                ),
             ),
 
         "paycheck_proximity_days":
             calculate_paycheck_proximity(
-                base_features[
+                base_features.get(
                     "days_since_last_income"
-                ]
+                )
             ),
 
         "discretionary_spend_ratio":
             calculate_discretionary_spend_ratio(
-                base_features[
+                base_features.get(
                     "discretionary_spend_30d"
-                ],
-                base_features[
+                ),
+                base_features.get(
                     "spend_total_30d"
-                ],
+                ),
             ),
 
         "cash_buffer_days":
             calculate_cash_buffer_days(
-                base_features[
+                base_features.get(
                     "current_balance"
-                ],
-                base_features[
+                ),
+                base_features.get(
                     "spend_total_30d"
-                ],
+                ),
             ),
 
         "cash_buffer_velocity":
@@ -583,22 +867,22 @@ def calculate_advanced_features(
 
         "bnpl_payment_burden":
             calculate_bnpl_burden(
-                base_features[
+                base_features.get(
                     "bnpl_payment_amount_90d"
-                ],
-                base_features[
+                ),
+                base_features.get(
                     "income_total_90d"
-                ],
+                ),
             ),
 
         "income_stability_score":
             calculate_income_stability_score(
-                base_features[
+                base_features.get(
                     "income_cv_90d"
-                ],
-                base_features[
+                ),
+                base_features.get(
                     "income_count_90d"
-                ],
+                ),
             ),
 
         "data_confidence_score":
