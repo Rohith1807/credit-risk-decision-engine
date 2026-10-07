@@ -12,3 +12,6 @@ xgboost
 lightgbm
 plaid-python
 python-dotenv
+fastapi
+uvicorn
+pydantic
