@@ -10,3 +10,5 @@ mlflow
 joblib
 xgboost
 lightgbm
+plaid-python
+python-dotenv

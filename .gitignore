@@ -9,6 +9,8 @@ data/raw/*
 data/interim/*
 data/processed/*
 
+data/secrets/
+
 mlruns/
 artifacts/
 
