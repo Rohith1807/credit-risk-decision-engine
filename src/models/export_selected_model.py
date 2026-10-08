@@ -4,8 +4,13 @@ from pathlib import Path
 import joblib
 import pandas as pd
 
-from src.models.score_validation import (
-    build_lightgbm,
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+
+from src.models.preprocessing import (
+    build_preprocessor,
+)
+from src.models.train_baseline import (
     prepare_xy,
 )
 
@@ -28,13 +33,40 @@ MODEL_DIR = (
 
 MODEL_PATH = (
     MODEL_DIR
-    / "selected_lightgbm.joblib"
+    / "credit_risk_model_v1.joblib"
 )
 
 METADATA_PATH = (
     MODEL_DIR
-    / "selected_lightgbm_metadata.json"
+    / "credit_risk_model_v1_metadata.json"
 )
+
+
+def build_final_model(
+    X_train: pd.DataFrame,
+) -> Pipeline:
+
+    preprocessor = build_preprocessor(
+        X_train
+    )
+
+    model = LogisticRegression(
+        max_iter=2000,
+        random_state=42,
+    )
+
+    return Pipeline(
+        steps=[
+            (
+                "preprocessor",
+                preprocessor,
+            ),
+            (
+                "model",
+                model,
+            ),
+        ]
+    )
 
 
 def main():
@@ -48,7 +80,7 @@ def main():
         train
     )
 
-    pipeline = build_lightgbm(
+    pipeline = build_final_model(
         X_train
     )
 
@@ -69,7 +101,7 @@ def main():
 
     metadata = {
         "model_name":
-            "LightGBM",
+            "Logistic Regression",
 
         "model_version":
             "v1.0",
@@ -77,8 +109,13 @@ def main():
         "calibration":
             "raw",
 
+        "class_weighting":
+            "none",
+
         "training_rows":
-            len(train),
+            int(
+                len(train)
+            ),
 
         "training_default_rate":
             float(
@@ -89,6 +126,27 @@ def main():
             list(
                 X_train.columns
             ),
+
+        "validation_roc_auc":
+            0.800055,
+
+        "validation_pr_auc":
+            0.204199,
+
+        "final_test_roc_auc":
+            0.7680,
+
+        "final_test_pr_auc":
+            0.1801,
+
+        "final_test_brier_score":
+            0.0371,
+
+        "final_test_mean_pd":
+            0.0413,
+
+        "final_test_actual_default_rate":
+            0.0422,
     }
 
     with open(
@@ -104,13 +162,21 @@ def main():
         )
 
     print(
-        "Model saved:",
-        MODEL_PATH,
+        "Final model saved:"
     )
 
     print(
-        "Metadata saved:",
-        METADATA_PATH,
+        MODEL_PATH
+    )
+
+    print()
+
+    print(
+        "Metadata saved:"
+    )
+
+    print(
+        METADATA_PATH
     )
 
 

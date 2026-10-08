@@ -14,14 +14,14 @@ MODEL_PATH = (
     PROJECT_ROOT
     / "artifacts"
     / "models"
-    / "selected_lightgbm.joblib"
+    / "credit_risk_model_v1.joblib"
 )
 
 METADATA_PATH = (
     PROJECT_ROOT
     / "artifacts"
     / "models"
-    / "selected_lightgbm_metadata.json"
+    / "credit_risk_model_v1_metadata.json"
 )
 
 POLICY_PATH = (

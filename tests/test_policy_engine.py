@@ -93,7 +93,7 @@ def test_low_risk_full_approval():
     assert result.approved_limit == 500
 
 
-def test_medium_risk_low_and_grow():
+def test_medium_risk_rejected_when_unprofitable():
 
     result = make_credit_decision(
         probability_default=0.05,
@@ -106,13 +106,15 @@ def test_medium_risk_low_and_grow():
         config=TEST_CONFIG,
     )
 
+    assert result.decision == "REJECT"
+    assert result.policy_tier == "REJECT"
+    assert result.approved_limit == 0.0
     assert (
-        result.policy_tier
-        == "LOW_AND_GROW"
+        result.reason_code
+        == "NEGATIVE_EXPECTED_PROFIT"
     )
-
-    assert result.approved_limit == 100
-
+    assert result.expected_loss == 0.0
+    assert result.expected_profit == 0.0
 
 def test_high_risk_rejected():
 

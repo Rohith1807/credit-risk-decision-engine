@@ -54,7 +54,7 @@ def main():
         "thresholds"
     ][
         "low_risk_max_pd"
-    ] = 0.04
+    ] = 0.05
 
     config[
         "policy"
@@ -62,7 +62,7 @@ def main():
         "thresholds"
     ][
         "medium_risk_max_pd"
-    ] = 0.05
+    ] = 0.08
 
     rows = []
 

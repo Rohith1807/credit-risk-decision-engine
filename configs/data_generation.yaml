@@ -2,7 +2,7 @@ portfolio:
   seed: 42
 
   users:
-    count: 1000
+    count: 12000
 
   accounts_per_user:
     min: 1

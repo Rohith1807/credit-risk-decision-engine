@@ -13,6 +13,7 @@ from src.policy.reason_codes import (
     LOW_AND_GROW,
     LOW_DATA_CONFIDENCE,
     NEGATIVE_BALANCE_ACTIVITY,
+    NEGATIVE_EXPECTED_PROFIT
 )
 
 
@@ -225,6 +226,16 @@ def make_credit_decision(
             "servicing_cost"
         ],
     )
+
+    if approved_limit > 0 and profit <= 0:
+
+        approved_limit = 0.0
+        decision = "REJECT"
+        tier = "REJECT"
+        reason = NEGATIVE_EXPECTED_PROFIT
+
+        loss = 0.0
+        profit = 0.0
 
     return PolicyDecision(
         decision=decision,
