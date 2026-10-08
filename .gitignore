@@ -21,3 +21,9 @@ artifacts/
 
 .DS_Store
 Thumbs.db
+
+artifacts/*
+!artifacts/models/
+artifacts/models/*
+!artifacts/models/credit_risk_model_v1.joblib
+!artifacts/models/credit_risk_model_v1_metadata.json
