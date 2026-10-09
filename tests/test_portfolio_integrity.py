@@ -1,9 +1,28 @@
+from pathlib import Path
+
 import pandas as pd
+import pytest
 
 
-users = pd.read_parquet(
-    "data/raw/users.parquet"
-)
+RAW_DIR = Path("data/raw")
+
+REQUIRED_FILES = [
+    RAW_DIR / "users.parquet",
+    RAW_DIR / "bank_accounts.parquet",
+    RAW_DIR / "transactions.parquet",
+    RAW_DIR / "applications.parquet",
+    RAW_DIR / "loans.parquet",
+]
+
+
+if not all(path.exists() for path in REQUIRED_FILES):
+    pytest.skip(
+        "Raw generated portfolio files are not available in this environment.",
+        allow_module_level=True,
+    )
+
+
+users = pd.read_parquet(RAW_DIR / "users.parquet")
 
 accounts = pd.read_parquet(
     "data/raw/bank_accounts.parquet"
