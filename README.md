@@ -197,7 +197,7 @@ This keeps risk estimation and business economics separate.
 
 ---
 
-# What We Learned
+# Learning
 
 ## 1. Simpler Can Be Better
 
