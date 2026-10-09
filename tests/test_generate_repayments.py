@@ -1,10 +1,10 @@
 import pandas as pd
 
 
-def test_repayment_integrity():
+def test_repayment_integrity(require_data_file):
 
     repayments = pd.read_parquet(
-        "data/raw/repayments.parquet"
+        require_data_file("data/raw/repayments.parquet")
     )
 
     assert repayments[
@@ -33,10 +33,10 @@ def test_repayment_integrity():
     ).all()
 
 
-def test_default_definition():
+def test_default_definition(require_data_file):
 
     outcomes = pd.read_parquet(
-        "data/raw/loan_outcomes.parquet"
+        require_data_file("data/raw/loan_outcomes.parquet")
     )
 
     expected_default = (

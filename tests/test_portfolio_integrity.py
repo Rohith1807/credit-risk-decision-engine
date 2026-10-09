@@ -12,6 +12,8 @@ REQUIRED_FILES = [
     RAW_DIR / "transactions.parquet",
     RAW_DIR / "applications.parquet",
     RAW_DIR / "loans.parquet",
+    RAW_DIR / "repayments.parquet",
+    RAW_DIR / "loan_outcomes.parquet",
 ]
 
 

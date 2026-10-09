@@ -1,17 +1,12 @@
-from src.features.build_training_dataset import (
-    build_training_dataset,
-)
 from src.features.split_dataset import (
     time_based_split,
 )
 
 
-def test_time_split_has_no_overlap():
-    dataset = build_training_dataset()
-
+def test_time_split_has_no_overlap(training_dataset):
     train, validation, test = (
         time_based_split(
-            dataset
+            training_dataset
         )
     )
 
@@ -40,12 +35,10 @@ def test_time_split_has_no_overlap():
     )
 
 
-def test_time_split_order():
-    dataset = build_training_dataset()
-
+def test_time_split_order(training_dataset):
     train, validation, test = (
         time_based_split(
-            dataset
+            training_dataset
         )
     )
 

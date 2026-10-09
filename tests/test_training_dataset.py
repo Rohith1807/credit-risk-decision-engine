@@ -1,6 +1,5 @@
 from src.features.build_training_dataset import (
     FORBIDDEN_MODEL_COLUMNS,
-    build_training_dataset,
     get_model_columns,
 )
 
@@ -9,46 +8,36 @@ from src.features.data_availability import (
 )
 
 
-def test_training_dataset_has_target():
-    dataset = build_training_dataset()
-
-    assert "default_status" in dataset.columns
+def test_training_dataset_has_target(training_dataset):
+    assert "default_status" in training_dataset.columns
 
 
-def test_target_is_binary():
-    dataset = build_training_dataset()
-
+def test_target_is_binary(training_dataset):
     assert set(
-        dataset["default_status"].unique()
+        training_dataset["default_status"].unique()
     ).issubset(
         {0, 1}
     )
 
 
-def test_application_ids_unique():
-    dataset = build_training_dataset()
-
-    assert dataset[
+def test_application_ids_unique(training_dataset):
+    assert training_dataset[
         "application_id"
     ].is_unique
 
 
-def test_model_columns_exclude_target():
-    dataset = build_training_dataset()
-
+def test_model_columns_exclude_target(training_dataset):
     columns = get_model_columns(
-        dataset
+        training_dataset
     )
 
     assert "default_status" not in columns
 
 
-def test_forbidden_columns_not_in_model_features():
-    dataset = build_training_dataset()
-
+def test_forbidden_columns_not_in_model_features(training_dataset):
     columns = set(
         get_model_columns(
-            dataset
+            training_dataset
         )
     )
 
@@ -58,13 +47,11 @@ def test_forbidden_columns_not_in_model_features():
     )
 
 
-def test_training_dataset_not_empty():
-    dataset = build_training_dataset()
+def test_training_dataset_not_empty(training_dataset):
+    assert len(training_dataset) > 0
 
-    assert len(dataset) > 0
-
-def test_bank_features_missing_when_bank_data_unavailable():
-    dataset = build_training_dataset()
+def test_bank_features_missing_when_bank_data_unavailable(training_dataset):
+    dataset = training_dataset
 
     unavailable = dataset[
         dataset[
