@@ -5,6 +5,11 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+try:
+    import pyarrow.parquet as pq
+except ImportError:
+    pq = None
+
 
 # ============================================================
 # PATHS
@@ -13,6 +18,12 @@ import streamlit as st
 PROJECT_ROOT = Path(
     __file__
 ).resolve().parents[1]
+
+RAW_DIR = (
+    PROJECT_ROOT
+    / "data"
+    / "raw"
+)
 
 PROCESSED_DIR = (
     PROJECT_ROOT
@@ -36,6 +47,11 @@ TEST_DATA_PATH = (
     / "test.parquet"
 )
 
+TRAINING_DATA_PATH = (
+    PROCESSED_DIR
+    / "training_dataset.parquet"
+)
+
 CALIBRATION_PATH = (
     PROCESSED_DIR
     / "calibration_comparison.parquet"
@@ -44,6 +60,31 @@ CALIBRATION_PATH = (
 MODEL_METADATA_PATH = (
     MODEL_DIR
     / "credit_risk_model_v1_metadata.json"
+)
+
+USERS_PATH = (
+    RAW_DIR
+    / "users.parquet"
+)
+
+ACCOUNTS_PATH = (
+    RAW_DIR
+    / "bank_accounts.parquet"
+)
+
+TRANSACTIONS_PATH = (
+    RAW_DIR
+    / "transactions.parquet"
+)
+
+APPLICATIONS_PATH = (
+    RAW_DIR
+    / "applications.parquet"
+)
+
+LOANS_PATH = (
+    RAW_DIR
+    / "loans.parquet"
 )
 
 
@@ -136,6 +177,60 @@ st.markdown(
 
 
 # ============================================================
+# HELPERS
+# ============================================================
+
+def parquet_row_count(
+    path: Path,
+) -> int | None:
+    """
+    Read only Parquet metadata when possible so large
+    files such as transactions.parquet are not loaded
+    into memory just to obtain their row count.
+    """
+
+    if not path.exists():
+        return None
+
+    if pq is not None:
+        parquet_file = pq.ParquetFile(
+            path
+        )
+
+        return int(
+            parquet_file.metadata.num_rows
+        )
+
+    # Fallback if pyarrow metadata access
+    # is unavailable.
+    dataframe = pd.read_parquet(
+        path
+    )
+
+    return len(dataframe)
+
+
+def format_large_number(
+    value: int | None,
+) -> str:
+
+    if value is None:
+        return "N/A"
+
+    if value >= 1_000_000:
+        return (
+            f"{value / 1_000_000:.2f}M"
+        )
+
+    if value >= 1_000:
+        return (
+            f"{value / 1_000:.1f}K"
+        )
+
+    return f"{value:,}"
+
+
+# ============================================================
 # DATA LOADERS
 # ============================================================
 
@@ -155,7 +250,9 @@ def load_test_data():
 
 @st.cache_data
 def load_calibration():
+
     if CALIBRATION_PATH.exists():
+
         return pd.read_parquet(
             CALIBRATION_PATH
         )
@@ -165,6 +262,7 @@ def load_calibration():
 
 @st.cache_data
 def load_model_metadata():
+
     if not MODEL_METADATA_PATH.exists():
         return {}
 
@@ -173,7 +271,46 @@ def load_model_metadata():
         "r",
         encoding="utf-8",
     ) as file:
-        return json.load(file)
+
+        return json.load(
+            file
+        )
+
+
+@st.cache_data
+def load_portfolio_scale():
+
+    return {
+        "users":
+            parquet_row_count(
+                USERS_PATH
+            ),
+
+        "accounts":
+            parquet_row_count(
+                ACCOUNTS_PATH
+            ),
+
+        "transactions":
+            parquet_row_count(
+                TRANSACTIONS_PATH
+            ),
+
+        "applications":
+            parquet_row_count(
+                APPLICATIONS_PATH
+            ),
+
+        "labeled_outcomes":
+            parquet_row_count(
+                TRAINING_DATA_PATH
+            ),
+
+        "test_applications":
+            parquet_row_count(
+                FINAL_RESULTS_PATH
+            ),
+    }
 
 
 # ============================================================
@@ -207,6 +344,7 @@ decisions = load_final_results()
 test_data = load_test_data()
 calibration = load_calibration()
 metadata = load_model_metadata()
+portfolio_scale = load_portfolio_scale()
 
 
 # ============================================================
@@ -244,7 +382,7 @@ df = decisions.merge(
 
 
 # ============================================================
-# PORTFOLIO METRICS
+# FINAL TEST PORTFOLIO METRICS
 # ============================================================
 
 approved = df[
@@ -264,11 +402,15 @@ approval_rate = (
 )
 
 requested_gmv = float(
-    df["requested_amount"].sum()
+    df[
+        "requested_amount"
+    ].sum()
 )
 
 approved_gmv = float(
-    approved["approved_limit"].sum()
+    approved[
+        "approved_limit"
+    ].sum()
 )
 
 gmv_approval_rate = (
@@ -278,11 +420,15 @@ gmv_approval_rate = (
 )
 
 expected_loss = float(
-    approved["expected_loss"].sum()
+    approved[
+        "expected_loss"
+    ].sum()
 )
 
 expected_profit = float(
-    approved["expected_profit"].sum()
+    approved[
+        "expected_profit"
+    ].sum()
 )
 
 expected_loss_rate = (
@@ -298,19 +444,27 @@ expected_profit_margin = (
 )
 
 approved_default_rate = float(
-    approved["default_status"].mean()
+    approved[
+        "default_status"
+    ].mean()
 )
 
 rejected_default_rate = float(
-    rejected["default_status"].mean()
+    rejected[
+        "default_status"
+    ].mean()
 )
 
 mean_pd = float(
-    df["probability_default"].mean()
+    df[
+        "probability_default"
+    ].mean()
 )
 
 actual_default_rate = float(
-    df["default_status"].mean()
+    df[
+        "default_status"
+    ].mean()
 )
 
 
@@ -329,7 +483,7 @@ st.sidebar.caption(
 st.sidebar.divider()
 
 st.sidebar.subheader(
-    "Production Policy"
+    "Production-Style Policy"
 )
 
 st.sidebar.write(
@@ -345,8 +499,9 @@ st.sidebar.write(
 )
 
 st.sidebar.caption(
-    "Bank-data fallback and data-confidence "
-    "controls are applied separately."
+    "Bank-data fallback, data-confidence "
+    "controls, and expected-profit viability "
+    "checks are applied separately."
 )
 
 st.sidebar.divider()
@@ -373,40 +528,56 @@ st.sidebar.write(
 
 st.sidebar.divider()
 
-decision_filter = st.sidebar.multiselect(
-    "Decision",
-    options=sorted(
-        df["decision"]
-        .dropna()
-        .unique()
-    ),
-    default=sorted(
-        df["decision"]
-        .dropna()
-        .unique()
-    ),
+decision_filter = (
+    st.sidebar.multiselect(
+        "Decision",
+        options=sorted(
+            df[
+                "decision"
+            ]
+            .dropna()
+            .unique()
+        ),
+        default=sorted(
+            df[
+                "decision"
+            ]
+            .dropna()
+            .unique()
+        ),
+    )
 )
 
-tier_filter = st.sidebar.multiselect(
-    "Policy tier",
-    options=sorted(
-        df["policy_tier"]
-        .dropna()
-        .unique()
-    ),
-    default=sorted(
-        df["policy_tier"]
-        .dropna()
-        .unique()
-    ),
+tier_filter = (
+    st.sidebar.multiselect(
+        "Policy tier",
+        options=sorted(
+            df[
+                "policy_tier"
+            ]
+            .dropna()
+            .unique()
+        ),
+        default=sorted(
+            df[
+                "policy_tier"
+            ]
+            .dropna()
+            .unique()
+        ),
+    )
 )
 
 filtered_df = df[
-    df["decision"].isin(
+    df[
+        "decision"
+    ].isin(
         decision_filter
     )
     &
-    df["policy_tier"].isin(
+    df[
+        "policy_tier"
+    ].isin(
         tier_filter
     )
 ].copy()
@@ -431,9 +602,112 @@ st.markdown(
 )
 
 st.caption(
-    "Final out-of-sample evaluation on the "
-    "12,000-user synthetic portfolio. "
-    "Portfolio project — not a production credit system."
+    "Synthetic BNPL portfolio with final "
+    "out-of-sample model and policy evaluation. "
+    "Portfolio demonstration only — not a production "
+    "consumer credit system."
+)
+
+
+# ============================================================
+# PORTFOLIO SCALE
+# ============================================================
+
+st.subheader(
+    "Portfolio Scale & Data Coverage"
+)
+
+st.caption(
+    "Full synthetic portfolio scale is shown below. "
+    "Model and policy performance metrics in this "
+    "dashboard are calculated only on the held-out "
+    "chronological test portfolio."
+)
+
+scale1, scale2, scale3 = (
+    st.columns(3)
+)
+
+scale1.metric(
+    "Synthetic Users",
+    format_large_number(
+        portfolio_scale[
+            "users"
+        ]
+    ),
+)
+
+scale2.metric(
+    "Bank Accounts",
+    format_large_number(
+        portfolio_scale[
+            "accounts"
+        ]
+    ),
+)
+
+scale3.metric(
+    "Transactions",
+    format_large_number(
+        portfolio_scale[
+            "transactions"
+        ]
+    ),
+)
+
+scale4, scale5, scale6 = (
+    st.columns(3)
+)
+
+scale4.metric(
+    "Credit Applications",
+    format_large_number(
+        portfolio_scale[
+            "applications"
+        ]
+    ),
+)
+
+scale5.metric(
+    "Labeled Outcomes",
+    format_large_number(
+        portfolio_scale[
+            "labeled_outcomes"
+        ]
+    ),
+)
+
+scale6.metric(
+    "Held-Out Test Applications",
+    format_large_number(
+        portfolio_scale[
+            "test_applications"
+        ]
+    ),
+)
+
+st.info(
+    "The 12K-user portfolio represents the full "
+    "simulated lending environment. The 5.3K held-out "
+    "applications represent the untouched test sample "
+    "used to report out-of-sample model and policy "
+    "performance."
+)
+
+
+# ============================================================
+# FINAL TEST KPI HEADER
+# ============================================================
+
+st.subheader(
+    "Final Held-Out Test Performance"
+)
+
+st.caption(
+    "The following KPIs are calculated on the "
+    "chronological test set only and were not used "
+    "for model training, calibration selection, "
+    "or policy threshold optimization."
 )
 
 
@@ -540,9 +814,13 @@ with overview_tab:
     with left:
 
         decision_summary = (
-            df["decision"]
+            df[
+                "decision"
+            ]
             .value_counts()
-            .rename_axis("decision")
+            .rename_axis(
+                "decision"
+            )
             .reset_index(
                 name="applications"
             )
@@ -575,7 +853,9 @@ with overview_tab:
             )
             .properties(
                 height=300,
-                title="Approval vs Rejection",
+                title=(
+                    "Approval vs Rejection"
+                ),
             )
         )
 
@@ -641,7 +921,9 @@ with overview_tab:
             )
             .properties(
                 height=300,
-                title="Policy Tier Distribution",
+                title=(
+                    "Policy Tier Distribution"
+                ),
             )
         )
 
@@ -654,7 +936,9 @@ with overview_tab:
         "Risk Separation"
     )
 
-    risk1, risk2 = st.columns(2)
+    risk1, risk2 = (
+        st.columns(2)
+    )
 
     risk1.metric(
         "Approved Observed Default Rate",
@@ -667,8 +951,9 @@ with overview_tab:
     )
 
     st.caption(
-        "Rejected applications exhibit substantially "
-        "higher realized default risk than approved applications."
+        "Rejected applications exhibit materially "
+        "higher realized default risk than approved "
+        "applications on the held-out test portfolio."
     )
 
 
@@ -693,7 +978,10 @@ with risk_tab:
                 bin=alt.Bin(
                     maxbins=30
                 ),
-                title="Predicted Probability of Default",
+                title=(
+                    "Predicted Probability "
+                    "of Default"
+                ),
                 axis=alt.Axis(
                     format="%"
                 ),
@@ -818,12 +1106,16 @@ with policy_tab:
 
     econ1.metric(
         "Requested GMV",
-        f"${requested_gmv / 1_000_000:.2f}M",
+        (
+            f"${requested_gmv / 1_000_000:.2f}M"
+        ),
     )
 
     econ2.metric(
         "Approved GMV",
-        f"${approved_gmv / 1_000_000:.2f}M",
+        (
+            f"${approved_gmv / 1_000_000:.2f}M"
+        ),
     )
 
     econ3.metric(
@@ -879,12 +1171,16 @@ with policy_tab:
             {
                 "approved_gmv":
                     "${:,.2f}",
+
                 "expected_loss":
                     "${:,.2f}",
+
                 "expected_profit":
                     "${:,.2f}",
+
                 "mean_pd":
                     "{:.2%}",
+
                 "observed_default_rate":
                     "{:.2%}",
             }
@@ -898,7 +1194,9 @@ with policy_tab:
     )
 
     reason_summary = (
-        df["reason_code"]
+        df[
+            "reason_code"
+        ]
         .value_counts()
         .rename_axis(
             "reason_code"
@@ -931,7 +1229,9 @@ with policy_tab:
         .properties(
             height=max(
                 250,
-                len(reason_summary) * 38,
+                len(
+                    reason_summary
+                ) * 38,
             )
         )
     )
@@ -958,17 +1258,32 @@ with model_tab:
 
     model1.metric(
         "ROC-AUC",
-        f"{metadata.get('final_test_roc_auc', 0.7680):.3f}",
+        (
+            f"{metadata.get(
+                'final_test_roc_auc',
+                0.7680
+            ):.3f}"
+        ),
     )
 
     model2.metric(
         "PR-AUC",
-        f"{metadata.get('final_test_pr_auc', 0.1801):.3f}",
+        (
+            f"{metadata.get(
+                'final_test_pr_auc',
+                0.1801
+            ):.3f}"
+        ),
     )
 
     model3.metric(
         "Brier Score",
-        f"{metadata.get('final_test_brier_score', 0.0371):.4f}",
+        (
+            f"{metadata.get(
+                'final_test_brier_score',
+                0.0371
+            ):.4f}"
+        ),
     )
 
     model4.metric(
@@ -980,8 +1295,9 @@ with model_tab:
     )
 
     st.caption(
-        "Final test performance is reported on the "
-        "previously untouched chronological test set."
+        "Final model metrics are reported on "
+        "the previously untouched chronological "
+        "test set."
     )
 
     st.subheader(
@@ -990,14 +1306,18 @@ with model_tab:
 
     st.markdown(
         """
-        **Champion:** Unweighted Logistic Regression
+        **Champion: Unweighted Logistic Regression**
 
-        The final model was selected after comparing
-        Logistic Regression, XGBoost, and LightGBM.
-        Logistic Regression delivered the strongest
-        validation discrimination while retaining
-        well-behaved probability estimates and
-        straightforward interpretability.
+        Logistic Regression, XGBoost, and LightGBM
+        were evaluated on the scaled modeling
+        portfolio.
+
+        Logistic Regression was selected because it
+        delivered the strongest overall validation
+        discrimination while retaining well-behaved
+        probability estimates, straightforward
+        interpretation, and governance-friendly
+        deployment characteristics.
         """
     )
 
@@ -1080,7 +1400,9 @@ with model_tab:
         "Model Governance"
     )
 
-    gov1, gov2, gov3 = st.columns(3)
+    gov1, gov2, gov3 = (
+        st.columns(3)
+    )
 
     gov1.info(
         "Model Version\n\n"
@@ -1091,11 +1413,13 @@ with model_tab:
     )
 
     gov2.info(
-        "Calibration\n\nRaw probabilities"
+        "Calibration\n\n"
+        "Raw probabilities"
     )
 
     gov3.info(
-        "Behavioral Hard Rejects\n\nDisabled"
+        "Behavioral Hard Rejects\n\n"
+        "Disabled after ablation"
     )
 
 
@@ -1107,6 +1431,11 @@ with segment_tab:
 
     st.subheader(
         "Portfolio Segment Analysis"
+    )
+
+    st.caption(
+        "Segment metrics below are calculated on "
+        "the held-out test portfolio."
     )
 
     segment_options = [
@@ -1242,12 +1571,16 @@ with segment_tab:
                 {
                     "approval_rate":
                         "{:.2%}",
+
                     "mean_pd":
                         "{:.2%}",
+
                     "observed_default_rate":
                         "{:.2%}",
+
                     "approved_gmv":
                         "${:,.2f}",
+
                     "expected_profit":
                         "${:,.2f}",
                 }
@@ -1269,7 +1602,8 @@ with explorer_tab:
 
     st.caption(
         "Use the sidebar filters to inspect specific "
-        "decision and policy populations."
+        "decision and policy populations from the "
+        "held-out test portfolio."
     )
 
     display_columns = [
@@ -1351,8 +1685,10 @@ with explorer_tab:
 st.divider()
 
 st.caption(
-    "Credit Risk Decision Engine • Synthetic portfolio • "
+    "Credit Risk Decision Engine • "
+    "12K-user synthetic portfolio • "
     "Final model: Logistic Regression • "
+    "Held-out chronological test evaluation • "
     "FastAPI + Docker + Streamlit • "
     "Portfolio demonstration only"
 )

@@ -3,7 +3,7 @@ policy:
 
   thresholds:
     low_risk_max_pd: 0.05
-    medium_risk_max_pd: 0.055
+    medium_risk_max_pd: 0.08
 
   limits:
     full_approval_max: 1000
