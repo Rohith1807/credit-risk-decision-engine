@@ -3,11 +3,11 @@ policy:
 
   thresholds:
     low_risk_max_pd: 0.05
-    medium_risk_max_pd: 0.08
+    medium_risk_max_pd: 0.055
 
   limits:
     full_approval_max: 1000
-    low_and_grow_max: 100
+    low_and_grow_max: 500
     fallback_max: 50
 
   economics:
